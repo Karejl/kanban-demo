@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Канбан</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+[data-theme="dark"]{
+  --bg:#0f1117;--surface:#2a2e3b;--card:#3d4252;--card-hover:#464b5c;
+  --task-bg:#fefce8;--task-bg-hover:#fef9c3;
+  --accent:#4f8ef7;--accent-hover:#3a74d6;--danger:#ef4444;
+  --text:#e4e7ec;--text-secondary:#9ca3af;--muted:#6b7280;--border:#3e4555;
+  --overlay:rgba(0,0,0,.55);
+  --input-bg:#1e2128;--input-border:#363a44;
+  --backlog:#64748b;--backlog-bg:rgba(100,116,139,.12);
+  --inwork:#3b82f6;--inwork-bg:rgba(59,130,246,.12);
+  --review:#f59e0b;--review-bg:rgba(245,158,11,.12);
+  --done:#22c55e;--done-bg:rgba(34,197,94,.12);
+  --cancel:#ef4444;--cancel-bg:rgba(239,68,68,.12);
+  --shadow:0 1px 3px rgba(0,0,0,.4);
+  --shadow-lg:0 8px 24px rgba(0,0,0,.5);
+  --task-text:#1e293b;
+}
+
+[data-theme="light"]{
+  --bg:#e5e7eb;--surface:#e8e9ec;--card:#d1d5db;--card-hover:#c7cbd1;
+  --task-bg:#fefce8;--task-bg-hover:#fef9c3;
+  --accent:#3b82f6;--accent-hover:#2563eb;--danger:#dc2626;
+  --text:#111827;--text-secondary:#4b5563;--muted:#9ca3af;--border:#c8cdd4;
+  --overlay:rgba(0,0,0,.3);
+  --input-bg:#f9fafb;--input-border:#d1d5db;
+  --backlog:#64748b;--backlog-bg:rgba(100,116,139,.08);
+  --inwork:#3b82f6;--inwork-bg:rgba(59,130,246,.08);
+  --review:#f59e0b;--review-bg:rgba(245,158,11,.08);
+  --done:#22c55e;--done-bg:rgba(34,197,94,.08);
+  --cancel:#ef4444;--cancel-bg:rgba(239,68,68,.08);
+  --shadow:0 1px 3px rgba(0,0,0,.08);
+  --shadow-lg:0 8px 24px rgba(0,0,0,.12);
+  --task-text:#1e293b;
+}
+
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:auto;transition:background .25s,color .25s}
+
+header{background:var(--surface);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;transition:background .25s}
+.header-left{display:flex;align-items:center;gap:16px}
+header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
+.header-actions{display:flex;align-items:center;gap:10px}
+.datetime{display:flex;flex-direction:column;align-items:flex-end;font-size:12px;color:var(--text-secondary);line-height:1.3;margin-right:8px}
+.datetime .time{font-size:14px;font-weight:600;color:var(--text)}
+
+.theme-toggle{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;transition:all .2s}
+.theme-toggle:hover{background:var(--card-hover);border-color:var(--muted)}
+
+#addTaskBtn{background:var(--accent);color:#fff;border:none;padding:7px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:background .2s}
+#addTaskBtn:hover{background:var(--accent-hover)}
+
+#historyBtn{background:var(--card);color:var(--text);border:1px solid var(--border);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:background .2s,border-color .2s}
+#historyBtn:hover{background:var(--card-hover);border-color:var(--muted)}
+
+.board{display:flex;gap:14px;padding:20px 20px 20px;min-height:calc(100vh - 57px);overflow-x:auto}
+
+.column{min-width:270px;max-width:310px;flex:1;background:var(--surface);border-radius:10px;display:flex;flex-direction:column;max-height:calc(100vh - 97px);border:1px solid var(--border);transition:background .25s,border-color .25s}
+
+.column-header{padding:10px 14px;border-radius:10px 10px 0 0;font-weight:600;font-size:13px;letter-spacing:.02em;display:flex;align-items:center;gap:8px;justify-content:space-between;border-bottom:2px solid transparent}
+.col-backlog .column-header{color:var(--backlog);border-bottom-color:var(--backlog)}
+.col-inwork .column-header{color:var(--inwork);border-bottom-color:var(--inwork)}
+.col-review .column-header{color:var(--review);border-bottom-color:var(--review)}
+.col-done .column-header{color:var(--done);border-bottom-color:var(--done)}
+.col-cancel .column-header{color:var(--cancel);border-bottom-color:var(--cancel)}
+
+.column-header .status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.col-backlog .status-dot{background:var(--backlog)}
+.col-inwork .status-dot{background:var(--inwork)}
+.col-review .status-dot{background:var(--review)}
+.col-done .status-dot{background:var(--done)}
+.col-cancel .status-dot{background:var(--cancel)}
+
+.column-header .count{background:var(--border);padding:1px 8px;border-radius:10px;font-size:11px;font-weight:500;color:var(--text-secondary);min-width:22px;text-align:center}
+.column-body{padding:8px;flex:1;overflow-y:auto;min-height:60px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.column-body.drag-over{background:var(--accent);background:rgba(59,130,246,.06);border-radius:0 0 10px 10px}
+
+.task-card{background:var(--task-bg);border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:grab;transition:transform .12s,box-shadow .12s,background .15s;border:1px solid var(--review);position:relative}
+.task-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-lg);background:var(--task-bg-hover)}
+.task-card.dragging{opacity:.35;transform:rotate(1deg)}
+
+.task-card .task-num{font-size:11px;color:var(--task-text);opacity:.6;margin-bottom:3px;font-weight:500}
+.task-card .task-title{font-size:13px;font-weight:600;margin-bottom:6px;line-height:1.35;color:var(--task-text)}
+.task-card .task-meta{display:flex;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--task-text);opacity:.75}
+.task-card .task-meta span{display:inline-flex;align-items:center;gap:3px}
+
+.task-card .category-badge{padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.02em}
+.cat-bug{background:var(--cancel-bg);color:var(--cancel)}
+.cat-feature{background:var(--inwork-bg);color:var(--inwork)}
+.cat-improvement{background:var(--review-bg);color:var(--review)}
+.cat-task{background:var(--backlog-bg);color:var(--backlog)}
+.cat-docs{background:var(--done-bg);color:var(--done)}
+
+.task-card .task-deadline{color:var(--review);font-weight:600}
+.task-card .task-files-badge{background:var(--backlog-bg);padding:1px 6px;border-radius:4px;color:var(--backlog);font-weight:500}
+
+.task-card .delete-btn{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;opacity:0;transition:opacity .12s,color .12s}
+.task-card:hover .delete-btn{opacity:1}
+.task-card .delete-btn:hover{color:var(--danger)}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:var(--overlay);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal{background:var(--surface);border-radius:12px;width:580px;max-width:95vw;max-height:90vh;overflow-y:auto;padding:24px;position:relative;border:1px solid var(--border);box-shadow:var(--shadow-lg);transition:background .25s}
+.modal h2{font-size:17px;margin-bottom:18px;padding-right:30px;font-weight:700}
+.modal-close{position:absolute;top:14px;right:14px;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;transition:color .15s}
+.modal-close:hover{color:var(--danger)}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group.full{grid-column:1/-1}
+.form-group label{font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.form-group input,.form-group select,.form-group textarea{background:var(--input-bg);border:1px solid var(--input-border);color:var(--text);border-radius:6px;padding:8px 10px;font-size:13px;font-family:inherit;transition:border-color .15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:50px}
+
+.form-actions{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
+.btn{padding:7px 18px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:background .15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn-secondary{background:var(--card);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--card-hover)}
+
+.section-title{font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin:18px 0 8px;border-top:1px solid var(--border);padding-top:14px}
+.comment-item{background:var(--card);border-radius:6px;padding:8px 10px;margin-bottom:6px;border:1px solid var(--border)}
+.comment-item .comment-date{font-size:11px;color:var(--muted);font-weight:500}
+.comment-item .comment-text{font-size:13px;margin-top:3px;line-height:1.45}
+.file-item{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:6px;padding:6px 10px;margin-bottom:4px;font-size:12px;border:1px solid var(--border)}
+.file-item .file-remove{background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px}
+.history-item{font-size:12px;color:var(--text-secondary);padding:5px 0;border-bottom:1px solid var(--border);line-height:1.4}
+.history-item:last-child{border-bottom:none}
+.history-item strong{color:var(--muted);font-weight:500}
+.empty-col{text-align:center;color:var(--muted);font-size:12px;padding:24px 0;opacity:.5}
+.file-input-wrap{display:flex;gap:8px;align-items:center}
+.file-input-wrap input[type=file]{display:none}
+.file-input-wrap .btn{font-size:12px;padding:5px 12px}
+
+.comment-input-wrap{display:flex;gap:8px;margin-top:6px}
+.comment-input-wrap input{flex:1;background:var(--input-bg);border:1px solid var(--input-border);color:var(--text);border-radius:6px;padding:8px 10px;font-size:13px;font-family:inherit;transition:border-color .15s}
+.comment-input-wrap input:focus{outline:none;border-color:var(--accent)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Канбан</h1>
+  </div>
+  <div class="datetime" id="datetime">
+    <span class="time" id="clockTime">00:00</span>
+    <span id="clockDate">--.--.----</span>
+  </div>
+  <div class="header-actions">
+    <button class="theme-toggle" id="themeToggle" title="Переключить тему">&#9790;</button>
+    <button id="historyBtn" title="История">История</button>
+    <button id="addTaskBtn">+ Новая задача</button>
+  </div>
+</header>
+
+<main class="board" id="board">
+  <div class="column col-backlog" data-status="backlog">
+    <div class="column-header"><span class="status-dot"></span><span>Backlog</span><span class="count" id="count-backlog">0</span></div>
+    <div class="column-body" data-status="backlog"></div>
+  </div>
+  <div class="column col-inwork" data-status="inwork">
+    <div class="column-header"><span class="status-dot"></span><span>In Work</span><span class="count" id="count-inwork">0</span></div>
+    <div class="column-body" data-status="inwork"></div>
+  </div>
+  <div class="column col-review" data-status="review">
+    <div class="column-header"><span class="status-dot"></span><span>Review</span><span class="count" id="count-review">0</span></div>
+    <div class="column-body" data-status="review"></div>
+  </div>
+  <div class="column col-done" data-status="done">
+    <div class="column-header"><span class="status-dot"></span><span>Done</span><span class="count" id="count-done">0</span></div>
+    <div class="column-body" data-status="done"></div>
+  </div>
+  <div class="column col-cancel" data-status="cancel">
+    <div class="column-header"><span class="status-dot"></span><span>Cancel</span><span class="count" id="count-cancel">0</span></div>
+    <div class="column-body" data-status="cancel"></div>
+  </div>
+</main>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="taskModal">
+    <button class="modal-close" id="modalClose">&times;</button>
+    <h2 id="modalTitle">Новая задача</h2>
+    <form id="taskForm">
+      <input type="hidden" id="taskId">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label for="taskTitleInput">Название</label>
+          <input type="text" id="taskTitleInput" required placeholder="Название задачи">
+        </div>
+        <div class="form-group">
+          <label for="taskCategory">Категория</label>
+          <select id="taskCategory">
+            <option value="">— выберите —</option>
+            <option value="bug">Баг</option>
+            <option value="feature">Фича</option>
+            <option value="improvement">Улучшение</option>
+            <option value="task">Задача</option>
+            <option value="docs">Документация</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="taskStatus">Статус</label>
+          <select id="taskStatus">
+            <option value="backlog">Backlog</option>
+            <option value="inwork">In Work</option>
+            <option value="review">Review</option>
+            <option value="done">Done</option>
+            <option value="cancel">Cancel</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="taskInitiator">Инициатор</label>
+          <input type="text" id="taskInitiator" placeholder="Кто поставил">
+        </div>
+        <div class="form-group">
+          <label for="taskAuthor">Автор</label>
+          <input type="text" id="taskAuthor" placeholder="Кто выполняет">
+        </div>
+        <div class="form-group">
+          <label for="taskDeadline">Срок</label>
+          <input type="date" id="taskDeadline">
+        </div>
+        <div class="form-group">
+          <label for="taskDescription">Описание</label>
+          <textarea id="taskDescription" rows="3" placeholder="Подробное описание задачи"></textarea>
+        </div>
+      </div>
+
+      <div class="section-title">Файлы</div>
+      <div class="file-input-wrap">
+        <input type="file" id="fileInput" multiple>
+        <button type="button" class="btn btn-secondary" id="addFileBtn">Прикрепить файл</button>
+        <span id="fileCountLabel" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+      <div id="filesList"></div>
+
+      <div class="section-title">Комментарии</div>
+      <div id="commentsList"></div>
+      <div class="comment-input-wrap">
+        <input type="text" id="commentInput" placeholder="Новый комментарий">
+        <button type="button" class="btn btn-secondary" id="addCommentBtn">Добавить</button>
+      </div>
+
+      <div class="section-title">История изменений</div>
+      <div id="historyList"></div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" id="modalCancelBtn">Отмена</button>
+        <button type="submit" class="btn btn-primary" id="modalSaveBtn">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'kanban_tasks';
+const THEME_KEY = 'kanban_theme';
+const STATUSES = ['backlog','inwork','review','done','cancel'];
+const STATUS_LABELS = {backlog:'Backlog',inwork:'In Work',review:'Review',done:'Done',cancel:'Cancel'};
+const CATEGORY_LABELS = {bug:'Баг',feature:'Фича',improvement:'Улучшение',task:'Задача',docs:'Документация'};
+const CATEGORY_CSS = {bug:'cat-bug',feature:'cat-feature',improvement:'cat-improvement',task:'cat-task',docs:'cat-docs'};
+
+const applyTheme = (theme) => {
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('themeToggle');
+  btn.innerHTML = theme === 'dark' ? '&#9788;' : '&#9790;';
+  localStorage.setItem(THEME_KEY, theme);
+};
+
+const initTheme = () => {
+  const saved = localStorage.getItem(THEME_KEY);
+  if (saved) { applyTheme(saved); return; }
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(prefersDark ? 'dark' : 'light');
+};
+
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme');
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+});
+
+let tasks = [];
+let nextNum = 1;
+let draggedId = null;
+let tempFiles = [];
+
+const loadTasks = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      tasks = JSON.parse(raw);
+      nextNum = tasks.reduce((max, t) => Math.max(max, t.number || 0), 0) + 1;
+    }
+  } catch(e) { tasks = []; nextNum = 1; }
+};
+
+const saveTasks = () => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+};
+
+const genId = () => 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+
+const formatDate = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit',year:'numeric'});
+};
+
+const formatDateTime = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' +
+         d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+};
+
+const addHistory = (task, action) => {
+  task.history = task.history || [];
+  task.history.unshift({date: new Date().toISOString(), action});
+};
+
+const renderBoard = () => {
+  STATUSES.forEach(status => {
+    const body = document.querySelector(`.column-body[data-status="${status}"]`);
+    const count = document.getElementById(`count-${status}`);
+    const filtered = tasks.filter(t => t.status === status);
+    count.textContent = filtered.length;
+    body.innerHTML = '';
+    if (filtered.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-col';
+      empty.textContent = 'Пусто';
+      body.appendChild(empty);
+    }
+    filtered.forEach(task => {
+      const card = document.createElement('div');
+      card.className = 'task-card';
+      card.draggable = true;
+      card.dataset.id = task.id;
+      const deadlineHtml = task.deadline
+        ? `<span class="task-deadline">${formatDate(task.deadline)}</span>`
+        : '';
+      const filesHtml = task.files && task.files.length
+        ? `<span class="task-files-badge">${task.files.length} файл(ов)</span>`
+        : '';
+      let categoryHtml = '';
+      if (task.category) {
+        const css = CATEGORY_CSS[task.category] || '';
+        const label = CATEGORY_LABELS[task.category] || task.category;
+        categoryHtml = `<span class="category-badge ${css}">${label}</span>`;
+      }
+      card.innerHTML =
+        `<button class="delete-btn" data-id="${task.id}" title="Удалить">&times;</button>` +
+        `<div class="task-num">#${task.number}</div>` +
+        `<div class="task-title">${escapeHtml(task.title)}</div>` +
+        `<div class="task-meta">` +
+          categoryHtml +
+          (task.author ? `<span>${escapeHtml(task.author)}</span>` : '') +
+          deadlineHtml + filesHtml +
+        `</div>`;
+      body.appendChild(card);
+    });
+  });
+};
+
+const escapeHtml = (s) => {
+  if (!s) return '';
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+};
+
+const board = document.getElementById('board');
+
+board.addEventListener('dragstart', (e) => {
+  const card = e.target.closest('.task-card');
+  if (!card) return;
+  draggedId = card.dataset.id;
+  card.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+});
+
+board.addEventListener('dragend', (e) => {
+  const card = e.target.closest('.task-card');
+  if (card) card.classList.remove('dragging');
+  document.querySelectorAll('.column-body').forEach(b => b.classList.remove('drag-over'));
+  document.querySelectorAll('.drop-placeholder').forEach(p => p.remove());
+  draggedId = null;
+});
+
+board.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const body = e.target.closest('.column-body');
+  if (body && !body.classList.contains('drag-over')) {
+    document.querySelectorAll('.column-body').forEach(b => b.classList.remove('drag-over'));
+    body.classList.add('drag-over');
+  }
+});
+
+board.addEventListener('dragleave', (e) => {
+  const body = e.target.closest('.column-body');
+  if (body && !body.contains(e.relatedTarget)) {
+    body.classList.remove('drag-over');
+  }
+});
+
+board.addEventListener('drop', (e) => {
+  e.preventDefault();
+  const body = e.target.closest('.column-body');
+  if (!body || !draggedId) return;
+  body.classList.remove('drag-over');
+  const newStatus = body.dataset.status;
+  const task = tasks.find(t => t.id === draggedId);
+  if (task && task.status !== newStatus) {
+    const oldLabel = STATUS_LABELS[task.status];
+    const newLabel = STATUS_LABELS[newStatus];
+    task.status = newStatus;
+    task.updatedAt = new Date().toISOString();
+    addHistory(task, `Статус: ${oldLabel} → ${newLabel}`);
+    saveTasks();
+    renderBoard();
+  }
+  draggedId = null;
+});
+
+board.addEventListener('click', (e) => {
+  const delBtn = e.target.closest('.delete-btn');
+  if (delBtn) {
+    e.stopPropagation();
+    const id = delBtn.dataset.id;
+    if (confirm('Удалить задачу?')) {
+      tasks = tasks.filter(t => t.id !== id);
+      saveTasks();
+      renderBoard();
+    }
+    return;
+  }
+  const card = e.target.closest('.task-card');
+  if (card) {
+    openModal(card.dataset.id);
+  }
+});
+
+const modalOverlay = document.getElementById('modalOverlay');
+const taskForm = document.getElementById('taskForm');
+const taskIdField = document.getElementById('taskId');
+const modalTitleEl = document.getElementById('modalTitle');
+
+const openModal = (id) => {
+  const isNew = !id;
+  const task = isNew ? null : tasks.find(t => t.id === id);
+  tempFiles = [];
+
+  taskIdField.value = isNew ? '' : task.id;
+  modalTitleEl.textContent = isNew ? 'Новая задача' : `Задача #${task.number}`;
+  document.getElementById('taskTitleInput').value = isNew ? '' : task.title;
+  document.getElementById('taskCategory').value = isNew ? '' : (task.category || '');
+  document.getElementById('taskStatus').value = isNew ? 'backlog' : task.status;
+  document.getElementById('taskInitiator').value = isNew ? '' : (task.initiator || '');
+  document.getElementById('taskAuthor').value = isNew ? '' : (task.author || '');
+  document.getElementById('taskDeadline').value = isNew ? '' : (task.deadline || '');
+  document.getElementById('taskDescription').value = isNew ? '' : (task.description || '');
+
+  if (!isNew && task.files) {
+    tempFiles = [...task.files];
+  }
+  renderFilesList();
+  renderComments(task);
+  renderHistory(task);
+
+  modalOverlay.classList.add('active');
+  document.getElementById('taskTitleInput').focus();
+};
+
+const closeModal = () => {
+  modalOverlay.classList.remove('active');
+  tempFiles = [];
+};
+
+document.getElementById('modalClose').addEventListener('click', closeModal);
+document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', (e) => {
+  if (e.target === modalOverlay) closeModal();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && modalOverlay.classList.contains('active')) closeModal();
+});
+
+document.getElementById('addTaskBtn').addEventListener('click', () => openModal(null));
+
+document.getElementById('historyBtn').addEventListener('click', () => {
+  alert('тут будет история');
+});
+
+const renderFilesList = () => {
+  const list = document.getElementById('filesList');
+  list.innerHTML = '';
+  document.getElementById('fileCountLabel').textContent = tempFiles.length ? `${tempFiles.length} файл(ов)` : '';
+  tempFiles.forEach((f, i) => {
+    const div = document.createElement('div');
+    div.className = 'file-item';
+    const sizeKb = (f.size / 1024).toFixed(1);
+    div.innerHTML = `<span>${escapeHtml(f.name)}</span><span style="color:var(--muted);font-size:11px">${sizeKb} KB</span><button type="button" class="file-remove" data-index="${i}">&times;</button>`;
+    list.appendChild(div);
+  });
+};
+
+document.getElementById('filesList').addEventListener('click', (e) => {
+  const btn = e.target.closest('.file-remove');
+  if (btn) {
+    tempFiles.splice(parseInt(btn.dataset.index), 1);
+    renderFilesList();
+  }
+});
+
+document.getElementById('addFileBtn').addEventListener('click', () => {
+  document.getElementById('fileInput').click();
+});
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+  const files = e.target.files;
+  if (!files.length) return;
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      tempFiles.push({name: file.name, size: file.size, data: ev.target.result});
+      renderFilesList();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+});
+
+const renderComments = (task) => {
+  const list = document.getElementById('commentsList');
+  list.innerHTML = '';
+  if (!task || !task.comments || task.comments.length === 0) return;
+  task.comments.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'comment-item';
+    div.innerHTML = `<div class="comment-date">${formatDateTime(c.date)}</div><div class="comment-text">${escapeHtml(c.text)}</div>`;
+    list.appendChild(div);
+  });
+};
+
+const renderHistory = (task) => {
+  const list = document.getElementById('historyList');
+  list.innerHTML = '';
+  if (!task || !task.history || task.history.length === 0) return;
+  task.history.forEach(h => {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.innerHTML = `<strong>${formatDateTime(h.date)}</strong> — ${escapeHtml(h.action)}`;
+    list.appendChild(div);
+  });
+};
+
+let pendingComments = [];
+
+document.getElementById('addCommentBtn').addEventListener('click', () => {
+  const input = document.getElementById('commentInput');
+  const text = input.value.trim();
+  if (!text) return;
+  const id = taskIdField.value;
+  if (id) {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      task.comments = task.comments || [];
+      task.comments.push({date: new Date().toISOString(), text});
+      addHistory(task, `Комментарий добавлен`);
+      saveTasks();
+      renderComments(task);
+      renderHistory(task);
+    }
+  } else {
+    pendingComments.push({date: new Date().toISOString(), text});
+  }
+  input.value = '';
+});
+
+taskForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const id = taskIdField.value;
+  const title = document.getElementById('taskTitleInput').value.trim();
+  if (!title) return;
+
+  if (id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    const oldStatus = task.status;
+    task.title = title;
+    task.category = document.getElementById('taskCategory').value;
+    task.status = document.getElementById('taskStatus').value;
+    task.initiator = document.getElementById('taskInitiator').value.trim();
+    task.author = document.getElementById('taskAuthor').value.trim();
+    task.deadline = document.getElementById('taskDeadline').value;
+    task.description = document.getElementById('taskDescription').value.trim();
+    task.updatedAt = new Date().toISOString();
+    task.files = [...tempFiles];
+    if (oldStatus !== task.status) {
+      addHistory(task, `Статус: ${STATUS_LABELS[oldStatus]} → ${STATUS_LABELS[task.status]}`);
+    }
+    addHistory(task, `Задача обновлена`);
+    saveTasks();
+  } else {
+    const newTask = {
+      id: genId(),
+      number: nextNum++,
+      title,
+      category: document.getElementById('taskCategory').value,
+      status: document.getElementById('taskStatus').value || 'backlog',
+      initiator: document.getElementById('taskInitiator').value.trim(),
+      author: document.getElementById('taskAuthor').value.trim(),
+      deadline: document.getElementById('taskDeadline').value,
+      description: document.getElementById('taskDescription').value.trim(),
+      comments: [...pendingComments],
+      files: [...tempFiles],
+      history: [{date: new Date().toISOString(), action: 'Задача создана'}],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    tasks.push(newTask);
+    saveTasks();
+  }
+
+  pendingComments = [];
+  closeModal();
+  renderBoard();
+});
+
+const updateClock = () => {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+  const dateStr = now.toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric'});
+  document.getElementById('clockTime').textContent = timeStr;
+  document.getElementById('clockDate').textContent = dateStr;
+};
+
+updateClock();
+setInterval(updateClock, 1000);
+
+initTheme();
+loadTasks();
+renderBoard();
+</script>
+</body>
+</html>
