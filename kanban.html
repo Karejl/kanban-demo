@@ -16,6 +16,7 @@
   --input-bg:#1e2128;--input-border:#363a44;
   --backlog:#64748b;--backlog-bg:rgba(100,116,139,.12);
   --inwork:#3b82f6;--inwork-bg:rgba(59,130,246,.12);
+  --pause:#8b5cf6;--pause-bg:rgba(139,92,246,.12);
   --review:#f59e0b;--review-bg:rgba(245,158,11,.12);
   --done:#22c55e;--done-bg:rgba(34,197,94,.12);
   --cancel:#ef4444;--cancel-bg:rgba(239,68,68,.12);
@@ -33,6 +34,7 @@
   --input-bg:#f9fafb;--input-border:#d1d5db;
   --backlog:#64748b;--backlog-bg:rgba(100,116,139,.08);
   --inwork:#3b82f6;--inwork-bg:rgba(59,130,246,.08);
+  --pause:#8b5cf6;--pause-bg:rgba(139,92,246,.08);
   --review:#f59e0b;--review-bg:rgba(245,158,11,.08);
   --done:#22c55e;--done-bg:rgba(34,197,94,.08);
   --cancel:#ef4444;--cancel-bg:rgba(239,68,68,.08);
@@ -65,6 +67,7 @@ header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
 .column-header{padding:10px 14px;border-radius:10px 10px 0 0;font-weight:600;font-size:13px;letter-spacing:.02em;display:flex;align-items:center;gap:8px;justify-content:space-between;border-bottom:2px solid transparent}
 .col-backlog .column-header{color:var(--backlog);border-bottom-color:var(--backlog)}
 .col-inwork .column-header{color:var(--inwork);border-bottom-color:var(--inwork)}
+.col-pause .column-header{color:var(--pause);border-bottom-color:var(--pause)}
 .col-review .column-header{color:var(--review);border-bottom-color:var(--review)}
 .col-done .column-header{color:var(--done);border-bottom-color:var(--done)}
 .col-cancel .column-header{color:var(--cancel);border-bottom-color:var(--cancel)}
@@ -72,6 +75,7 @@ header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
 .column-header .status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .col-backlog .status-dot{background:var(--backlog)}
 .col-inwork .status-dot{background:var(--inwork)}
+.col-pause .status-dot{background:var(--pause)}
 .col-review .status-dot{background:var(--review)}
 .col-done .status-dot{background:var(--done)}
 .col-cancel .status-dot{background:var(--cancel)}
@@ -103,6 +107,18 @@ header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
 .task-card .delete-btn{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;opacity:0;transition:opacity .12s,color .12s}
 .task-card:hover .delete-btn{opacity:1}
 .task-card .delete-btn:hover{color:var(--danger)}
+
+.task-card .task-timer{font-size:12px;font-weight:700;color:var(--inwork);font-variant-numeric:tabular-nums;margin-top:4px;display:flex;align-items:center;gap:6px}
+.task-card .task-timer.paused{color:var(--pause)}
+.task-card .task-timer .timer-label{font-weight:400;font-size:10px;color:var(--task-text);opacity:.5}
+
+.task-card .card-actions{display:flex;gap:4px;margin-top:6px}
+.task-card .card-actions button{flex:1;padding:3px 0;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--task-text);font-size:11px;font-weight:600;cursor:pointer;transition:all .12s}
+.task-card .card-actions button:hover{filter:brightness(1.1)}
+.task-card .card-actions .btn-start{border-color:var(--inwork);color:var(--inwork)}
+.task-card .card-actions .btn-pause{border-color:var(--pause);color:var(--pause)}
+.task-card .card-actions .btn-start:hover{background:var(--inwork);color:#fff}
+.task-card .card-actions .btn-pause:hover{background:var(--pause);color:#fff}
 
 .modal-overlay{display:none;position:fixed;inset:0;background:var(--overlay);z-index:100;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
 .modal-overlay.active{display:flex;opacity:1}
@@ -184,6 +200,10 @@ header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
     <div class="column-header"><span class="status-dot"></span><span>In Work</span><span class="count" id="count-inwork">0</span></div>
     <div class="column-body" data-status="inwork"></div>
   </div>
+  <div class="column col-pause" data-status="pause">
+    <div class="column-header"><span class="status-dot"></span><span>Пауза</span><span class="count" id="count-pause">0</span></div>
+    <div class="column-body" data-status="pause"></div>
+  </div>
   <div class="column col-review" data-status="review">
     <div class="column-header"><span class="status-dot"></span><span>Review</span><span class="count" id="count-review">0</span></div>
     <div class="column-body" data-status="review"></div>
@@ -225,6 +245,7 @@ header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
           <select id="taskStatus">
             <option value="backlog">Backlog</option>
             <option value="inwork">In Work</option>
+            <option value="pause">Пауза</option>
             <option value="review">Review</option>
             <option value="done">Done</option>
             <option value="cancel">Cancel</option>
@@ -284,8 +305,8 @@ header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
 <script>
 const STORAGE_KEY = 'kanban_tasks';
 const THEME_KEY = 'kanban_theme';
-const STATUSES = ['backlog','inwork','review','done','cancel'];
-const STATUS_LABELS = {backlog:'Backlog',inwork:'In Work',review:'Review',done:'Done',cancel:'Cancel'};
+const STATUSES = ['backlog','inwork','pause','review','done','cancel'];
+const STATUS_LABELS = {backlog:'Backlog',inwork:'In Work',pause:'Пауза',review:'Review',done:'Done',cancel:'Cancel'};
 const CATEGORY_LABELS = {bug:'Баг',feature:'Фича',improvement:'Улучшение',task:'Задача',docs:'Документация'};
 const CATEGORY_CSS = {bug:'cat-bug',feature:'cat-feature',improvement:'cat-improvement',task:'cat-task',docs:'cat-docs'};
 
@@ -347,6 +368,37 @@ const addHistory = (task, action) => {
   task.history.unshift({date: new Date().toISOString(), action});
 };
 
+const getWorkMs = (task) => {
+  let ms = task.workElapsedMs || 0;
+  if (task.workStartTime && task.status === 'inwork') {
+    ms += Date.now() - new Date(task.workStartTime).getTime();
+  }
+  return ms;
+};
+
+const formatTimer = (ms) => {
+  const totalMin = Math.floor(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return h > 0 ? `${h}ч ${String(m).padStart(2,'0')}м` : `${m}м`;
+};
+
+const startTimer = (task) => {
+  if (!task.workStartTime) {
+    task.workStartTime = new Date().toISOString();
+    addHistory(task, 'Таймер запущен');
+  }
+};
+
+const pauseTimer = (task) => {
+  if (task.workStartTime) {
+    const elapsed = Date.now() - new Date(task.workStartTime).getTime();
+    task.workElapsedMs = (task.workElapsedMs || 0) + elapsed;
+    task.workStartTime = null;
+    addHistory(task, 'Таймер на паузе');
+  }
+};
+
 const renderBoard = () => {
   STATUSES.forEach(status => {
     const body = document.querySelector(`.column-body[data-status="${status}"]`);
@@ -377,6 +429,20 @@ const renderBoard = () => {
         const label = CATEGORY_LABELS[task.category] || task.category;
         categoryHtml = `<span class="category-badge ${css}">${label}</span>`;
       }
+      let timerHtml = '';
+      if (task.status === 'inwork' || task.status === 'pause' || task.workElapsedMs > 0 || task.workStartTime) {
+        const workMs = getWorkMs(task);
+        const paused = task.status === 'pause';
+        timerHtml = `<div class="task-timer${paused ? ' paused' : ''}" data-timer="${task.id}"><span class="timer-label">${paused ? '⏸' : '⏱'}</span> ${formatTimer(workMs)}</div>`;
+      }
+
+      let actionsHtml = '';
+      if (task.status === 'inwork') {
+        actionsHtml = `<div class="card-actions"><button class="btn-pause" data-action="pause" data-id="${task.id}">⏸ Пауза</button></div>`;
+      } else if (task.status === 'pause') {
+        actionsHtml = `<div class="card-actions"><button class="btn-start" data-action="start" data-id="${task.id}">▶ Старт</button></div>`;
+      }
+
       card.innerHTML =
         `<button class="delete-btn" data-id="${task.id}" title="Удалить">&times;</button>` +
         `<div class="task-num">#${task.number}</div>` +
@@ -385,7 +451,9 @@ const renderBoard = () => {
           categoryHtml +
           (task.author ? `<span>${escapeHtml(task.author)}</span>` : '') +
           deadlineHtml + filesHtml +
-        `</div>`;
+        `</div>` +
+        timerHtml +
+        actionsHtml;
       body.appendChild(card);
     });
   });
@@ -443,6 +511,15 @@ board.addEventListener('drop', (e) => {
   if (task && task.status !== newStatus) {
     const oldLabel = STATUS_LABELS[task.status];
     const newLabel = STATUS_LABELS[newStatus];
+    if (task.status === 'inwork' && newStatus !== 'pause') {
+      pauseTimer(task);
+    }
+    if (newStatus === 'inwork') {
+      startTimer(task);
+    }
+    if (newStatus === 'pause' && task.status === 'inwork') {
+      pauseTimer(task);
+    }
     task.status = newStatus;
     task.updatedAt = new Date().toISOString();
     addHistory(task, `Статус: ${oldLabel} → ${newLabel}`);
@@ -462,6 +539,26 @@ board.addEventListener('click', (e) => {
       saveTasks();
       renderBoard();
     }
+    return;
+  }
+  const actionBtn = e.target.closest('[data-action]');
+  if (actionBtn) {
+    e.stopPropagation();
+    const task = tasks.find(t => t.id === actionBtn.dataset.id);
+    if (!task) return;
+    if (actionBtn.dataset.action === 'pause') {
+      pauseTimer(task);
+      task.status = 'pause';
+      addHistory(task, 'Статус: In Work → Пауза');
+      task.updatedAt = new Date().toISOString();
+    } else if (actionBtn.dataset.action === 'start') {
+      startTimer(task);
+      task.status = 'inwork';
+      addHistory(task, 'Статус: Пауза → In Work');
+      task.updatedAt = new Date().toISOString();
+    }
+    saveTasks();
+    renderBoard();
     return;
   }
   const card = e.target.closest('.task-card');
@@ -637,17 +734,21 @@ taskForm.addEventListener('submit', (e) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
     const oldStatus = task.status;
+    const newStatus = document.getElementById('taskStatus').value;
     task.title = title;
     task.category = document.getElementById('taskCategory').value;
-    task.status = document.getElementById('taskStatus').value;
+    task.status = newStatus;
     task.initiator = document.getElementById('taskInitiator').value.trim();
     task.author = document.getElementById('taskAuthor').value.trim();
     task.deadline = document.getElementById('taskDeadline').value;
     task.description = document.getElementById('taskDescription').value.trim();
     task.updatedAt = new Date().toISOString();
     task.files = [...tempFiles];
-    if (oldStatus !== task.status) {
-      addHistory(task, `Статус: ${STATUS_LABELS[oldStatus]} → ${STATUS_LABELS[task.status]}`);
+    if (oldStatus !== newStatus) {
+      if (oldStatus === 'inwork' && newStatus !== 'pause') pauseTimer(task);
+      if (newStatus === 'inwork') startTimer(task);
+      if (newStatus === 'pause' && oldStatus === 'inwork') pauseTimer(task);
+      addHistory(task, `Статус: ${STATUS_LABELS[oldStatus]} → ${STATUS_LABELS[newStatus]}`);
     }
     addHistory(task, `Задача обновлена`);
     saveTasks();
@@ -664,10 +765,15 @@ taskForm.addEventListener('submit', (e) => {
       description: document.getElementById('taskDescription').value.trim(),
       comments: [...pendingComments],
       files: [...tempFiles],
+      workStartTime: null,
+      workElapsedMs: 0,
       history: [{date: new Date().toISOString(), action: 'Задача создана'}],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
+    if (newTask.status === 'inwork') {
+      startTimer(newTask);
+    }
     tasks.push(newTask);
     saveTasks();
   }
@@ -687,6 +793,17 @@ const updateClock = () => {
 
 updateClock();
 setInterval(updateClock, 1000);
+
+setInterval(() => {
+  document.querySelectorAll('[data-timer]').forEach(el => {
+    const task = tasks.find(t => t.id === el.dataset.timer);
+    if (task) {
+      const ms = getWorkMs(task);
+      const paused = task.status === 'pause';
+      el.innerHTML = `<span class="timer-label">${paused ? '⏸' : '⏱'}</span> ${formatTimer(ms)}`;
+    }
+  });
+}, 1000);
 
 initTheme();
 loadTasks();
