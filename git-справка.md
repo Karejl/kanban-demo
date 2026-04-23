@@ -109,7 +109,98 @@ git stash drop                 # удалить stash
 
 ---
 
-## 8. GitHub Desktop
+## 8. Удалённые репозитории (GitHub)
+
+### Подключить
+```bash
+git remote add origin https://github.com/ЛОГИН/репо.git   # привязать удалённый репо
+git remote -v                                            # проверить связь
+```
+
+### Push (отправить на GitHub)
+```bash
+git push -u origin main          # первый push (запомнить связь ветки)
+git push                         # последующие push
+git push -u origin feature-name  # запушить другую ветку
+```
+Флаг `-u` (= `--set-upstream`) нужен только один раз — потом достаточно `git push`.
+
+### Pull (получить с GitHub)
+```bash
+git pull origin main             # скачать и влить изменения
+git pull                         # если ранее был -u
+git fetch                        # только скачать, не вливать (безопаснее)
+```
+`fetch` — посмотреть что изменилось, `pull` — сразу применить.
+
+### Отключиться
+```bash
+git remote remove origin         # отключить удалённый репо
+```
+Локальные файлы и коммиты остаются.
+
+### Авторизация
+GitHub требует **Personal Access Token** вместо пароля:
+Settings → Developer settings → Personal access tokens → Generate new token
+
+### Конфликты при push
+```bash
+git pull origin main --rebase    # подтянуть + наложить свои коммиты сверху
+git push                         # затем повторить push
+```
+
+### Переименовать ветку master → main
+```bash
+git branch -M main               # переименовать текущую ветку
+git push -u origin main          # запушить под новым именем
+```
+
+---
+
+## 9. Восстановление удалённой ветки
+
+```bash
+git reflog                                  # найти хеш последнего коммита ветки
+git checkout -b branch-name a1b2c3d         # пересоздать ветку из найденного хеша
+git branch branch-name HEAD@{1}            # быстро — если ветка была удалена недавно
+```
+`reflog` хранит историю ~90 дней, после этого восстановить невозможно.
+
+---
+
+## 10. Перенос изменений между ветками
+
+### Merge (слияние)
+```bash
+git checkout main               # перейти в целевую ветку
+git merge feature-name          # влить изменения
+```
+Создаёт merge-коммит, сохраняет всю историю.
+
+### Rebase (перемещение)
+```bash
+git checkout feature-name       # перейти в исходную ветку
+git rebase main                 # переиграть коммиты поверх main
+git checkout main
+git merge feature-name          # fast-forward слияние
+```
+Линейная история. **Не применять к запушенным веткам!**
+
+### Cherry-pick (один коммит)
+```bash
+git checkout main
+git cherry-pick a1b2c3d         # перенести конкретный коммит
+git cherry-pick a1b2c3d e4f5g6h # несколько коммитов
+```
+
+### Один файл из другой ветки
+```bash
+git checkout feature-name -- file.html   # взять файл без слияния
+```
+
+---
+
+## 11. GitHub Desktop
 
 | Действие | Как сделать |
 |---|---|
