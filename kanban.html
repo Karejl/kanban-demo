@@ -201,7 +201,7 @@ header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
     <div class="column-body" data-status="inwork"></div>
   </div>
   <div class="column col-pause" data-status="pause">
-    <div class="column-header"><span class="status-dot"></span><span>Пауза</span><span class="count" id="count-pause">0</span></div>
+    <div class="column-header"><span class="status-dot"></span><span>Pause</span><span class="count" id="count-pause">0</span></div>
     <div class="column-body" data-status="pause"></div>
   </div>
   <div class="column col-review" data-status="review">
@@ -245,7 +245,7 @@ header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
           <select id="taskStatus">
             <option value="backlog">Backlog</option>
             <option value="inwork">In Work</option>
-            <option value="pause">Пауза</option>
+            <option value="pause">Pause</option>
             <option value="review">Review</option>
             <option value="done">Done</option>
             <option value="cancel">Cancel</option>
@@ -306,7 +306,7 @@ header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
 const STORAGE_KEY = 'kanban_tasks';
 const THEME_KEY = 'kanban_theme';
 const STATUSES = ['backlog','inwork','pause','review','done','cancel'];
-const STATUS_LABELS = {backlog:'Backlog',inwork:'In Work',pause:'Пауза',review:'Review',done:'Done',cancel:'Cancel'};
+const STATUS_LABELS = {backlog:'Backlog',inwork:'In Work',pause:'Pause',review:'Review',done:'Done',cancel:'Cancel'};
 const CATEGORY_LABELS = {bug:'Баг',feature:'Фича',improvement:'Улучшение',task:'Задача',docs:'Документация'};
 const CATEGORY_CSS = {bug:'cat-bug',feature:'cat-feature',improvement:'cat-improvement',task:'cat-task',docs:'cat-docs'};
 
@@ -438,7 +438,7 @@ const renderBoard = () => {
 
       let actionsHtml = '';
       if (task.status === 'inwork') {
-        actionsHtml = `<div class="card-actions"><button class="btn-pause" data-action="pause" data-id="${task.id}">⏸ Пауза</button></div>`;
+        actionsHtml = `<div class="card-actions"><button class="btn-pause" data-action="pause" data-id="${task.id}">⏸ Pause</button></div>`;
       } else if (task.status === 'pause') {
         actionsHtml = `<div class="card-actions"><button class="btn-start" data-action="start" data-id="${task.id}">▶ Старт</button></div>`;
       }
@@ -549,12 +549,12 @@ board.addEventListener('click', (e) => {
     if (actionBtn.dataset.action === 'pause') {
       pauseTimer(task);
       task.status = 'pause';
-      addHistory(task, 'Статус: In Work → Пауза');
+      addHistory(task, 'Статус: In Work → Pause');
       task.updatedAt = new Date().toISOString();
     } else if (actionBtn.dataset.action === 'start') {
       startTimer(task);
       task.status = 'inwork';
-      addHistory(task, 'Статус: Пауза → In Work');
+      addHistory(task, 'Статус: Pause → In Work');
       task.updatedAt = new Date().toISOString();
     }
     saveTasks();
