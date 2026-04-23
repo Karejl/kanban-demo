@@ -56,8 +56,6 @@ header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
 #addTaskBtn{background:var(--accent);color:#fff;border:none;padding:7px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:background .2s}
 #addTaskBtn:hover{background:var(--accent-hover)}
 
-#historyBtn{background:var(--card);color:var(--text);border:1px solid var(--border);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:background .2s,border-color .2s}
-#historyBtn:hover{background:var(--card-hover);border-color:var(--muted)}
 
 .board{display:flex;gap:14px;padding:20px 20px 20px;min-height:calc(100vh - 57px);overflow-x:auto}
 
@@ -157,7 +155,6 @@ header h1{font-size:18px;font-weight:700;letter-spacing:-.3px}
   </div>
   <div class="header-actions">
     <button class="theme-toggle" id="themeToggle" title="Переключить тему">&#9790;</button>
-    <button id="historyBtn" title="История">История</button>
     <button id="addTaskBtn">+ Новая задача</button>
   </div>
 </header>
@@ -498,9 +495,6 @@ document.addEventListener('keydown', (e) => {
 
 document.getElementById('addTaskBtn').addEventListener('click', () => openModal(null));
 
-document.getElementById('historyBtn').addEventListener('click', () => {
-  alert('тут будет история');
-});
 
 const renderFilesList = () => {
   const list = document.getElementById('filesList');
