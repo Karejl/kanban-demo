@@ -1,0 +1,42 @@
+# OS
+.DS_Store
+thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Temp
+*.tmp
+*.bak
+*~
+
+# Env
+.env
+
+# Node
+node_modules/
+package-lock.json
+
+# Electron build
+dist/
+out/
+release/
+
+# Electron builder
+*.blockmap
+*.exe
+*.dmg
+*.AppImage
+*.snap
+*.deb
+*.rpm
+*.msi
+*.nupkg
+
+# Electron auto-updater
+dev-app-update.yml
